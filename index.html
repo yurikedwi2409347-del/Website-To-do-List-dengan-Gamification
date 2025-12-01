@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gamified To-Do List</title>
+  <style>
+    :root{
+      --bg:#FFCCE5; --card:#0b1220; --muted:#9aa7bf; --accent:#60a5fa; --success:#34d399; --danger:#fb7185;
+      --glass: rgba(12, 6, 6, 0.03);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,#FFCCE5 0%, #FFCCE5 100%);color:#e6eef8;padding:24px}
+    .container{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 360px;gap:20px}
+    header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}
+    h1{margin:0;font-size:20px;letter-spacing:0.2px}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .controls{display:flex;gap:8px;align-items:center}
+    input[type=text]{background:var(--glass);border:1px solid rgba(255,255,255,0.03);padding:10px;border-radius:8px;color:var(--muted);min-width:220px}
+    button{background:var(--accent);border:none;padding:10px 12px;border-radius:8px;color:#052033;font-weight:600;cursor:pointer}
+    .task-list{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+    .task{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border:1px solid rgba(255,255,255,0.02)}
+    .task .title{flex:1}
+    .small{font-size:12px;color:var(--muted)}
+    .xp-bar{height:10px;background:rgba(255,255,255,0.03);border-radius:999px;overflow:hidden}
+    .xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),#7dd3fc);width:0%;transition:width 600ms ease}
+    .meta{display:flex;gap:8px;align-items:center}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:8px;border-radius:999px;background:rgba(255,255,255,0.02);font-size:13px}
+    .ach-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .leaderboard{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .lb-row{display:flex;justify-content:space-between;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02)}
+    .muted{color:var(--muted)}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.03);color:var(--muted);padding:1px;border-radius:8px}
+    footer{grid-column:1/-1;margin-top:12px;color:var(--muted);font-size:13px}
+    @media (max-width:980px){.container{grid-template-columns:1fr}.card{padding:12px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 style="color: #0b1220; background-color: #fff;">GAMIFIED TO-DO LIST</h1>
+      <h3 style="color: #0b1220;">Ayo Selesaikan Tugasmu !</h3>
+      <div class="controls">
+        <img src="cakra.png" alt="" style="height: 100px;">
+        <div class="meta small">XP: <strong id="xpDisplay">0</strong> • Level: <strong id="levelDisplay">0</strong></div>
+        <div class="badge" id="topBadge">No badge</div>
+      </div>
+    </header>
+
+    <main class="card">
+      <section>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="taskInput" type="text" placeholder="Tambahkan tugas baru..." />
+          <button id="addBtn">Tambah</button>
+        </div>
+        <div class="task-list" id="taskList"></div>
+      </section>
+
+      <section style="margin-top:18px">
+        <h3 style="margin:0 0 8px 0">Achievements</h3>
+        <div class="ach-list" id="achList"></div>
+      </section>
+    </main>
+
+    <aside class="card">
+      <div>
+        <h3 style="margin:0 0 8px 0">Profile & Leaderboard</h3>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="username" type="text" placeholder="Nama kamu" style="flex:1" />
+          <button id="saveProfile" class="btn-ghost">Simpan
+          </button>
+          <!-- Tombol Hapus Pengguna -->
+          <button id="deleteUser" class="btn-ghost" style="border-color: var(--danger); color: var(--danger)">Hapus</button>
+        </div>
+
+        <div class="small muted">Bagikan skormu dengan teman: gunakan tombol Export / Import.</div>
+
+        <div style="margin-top:12px">
+          <div class="xp-bar" title="progress ke level berikutnya">
+            <div id="xpFill" class="xp-fill"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px">
+            <div class="small">Level <strong id="levelText">0</strong></div>
+            <div class="small">Next: <span id="xpNext">100</span> XP</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <h4 style="margin:0 0 8px 0">Leaderboard</h4>
+          <div class="leaderboard" id="leaderboard"></div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button id="exportBtn" class="btn-ghost">Export</button>
+            <button id="importBtn" class="btn-ghost">Import</button>
+            <input id="importArea" placeholder="Paste JSON leaderboard" style="flex:1;background:transparent;border:1px dashed rgba(255,255,255,0.03);padding:8px;border-radius:8px;color:var(--muted)" />
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <footer>
+      Tip: Semua data disimpan di browser (localStorage). Untuk membandingkan dengan teman, minta mereka export dan kirimkan JSON-nya, lalu import di sini.
+    </footer>
+  </div>
+
+  <script>
+  const STORAGE_KEY = 'gtd_app_v1';
+  const defaultState = {
+    xp: 0,
+    tasks: [],
+    username: '',
+    leaderboard: []
+  };
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {...defaultState};
+    }catch(e){console.error(e);return {...defaultState}} 
+  }
+  function saveState(){localStorage.setItem(STORAGE_KEY, JSON.stringify(state));}
+
+  const state = loadState();
+
+  // === ELEMENTS ===
+  const taskInput = document.getElementById('taskInput');
+  const addBtn = document.getElementById('addBtn');
+  const taskList = document.getElementById('taskList');
+  const xpDisplay = document.getElementById('xpDisplay');
+  const levelDisplay = document.getElementById('levelDisplay');
+  const topBadge = document.getElementById('topBadge');
+  const achList = document.getElementById('achList');
+  const username = document.getElementById('username');
+  const saveProfile = document.getElementById('saveProfile');
+  const deleteUserBtn = document.getElementById('deleteUser');
+  const leaderboardEl = document.getElementById('leaderboard');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importArea = document.getElementById('importArea');
+  const xpFill = document.getElementById('xpFill');
+  const xpNext = document.getElementById('xpNext');
+  const levelText = document.getElementById('levelText');
+  const levelDisplaySmall = document.getElementById('levelDisplay');
+
+  // === UTILITIES ===
+  function calcLevel(xp){return Math.floor(xp/100);} 
+  function xpToNext(level){return (level+1)*100 - state.xp;}
+  function uid(){return Math.random().toString(36).slice(2,9);}
+  function escapeHtml(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
+
+  // === BADGES ===
+  const BADGES = [
+    {id:'first_task', title:'First Task', desc:'Selesaikan tugas pertamamu', check: s=> s.tasks.filter(t=>t.done).length>=1},
+    {id:'10_tasks', title:'Task Novice', desc:'Selesaikan 10 tugas', check: s=> s.tasks.filter(t=>t.done).length>=10},
+    {id:'xp_500', title:'500 XP', desc:'Kumpulkan 500 XP', check: s=> s.xp>=500},
+    {id:'level_5', title:'Reached Level 5', desc:'Capai level 5', check: s=> calcLevel(s.xp)>=5}
+  ];
+
+  function earnedBadges(s){return BADGES.filter(b=>b.check(s));}
+
+  // === LEADERBOARD AUTO UPDATE ===
+  function updateLeaderboardXP() {
+    if (!state.username) return;  
+    const entry = state.leaderboard.find(p => p.name === state.username);
+    if (entry) entry.xp = state.xp;
+    saveState();
+    renderLeaderboard();
+  }
+
+  // === RENDER FUNCTIONS ===
+  function renderTasks(){
+    taskList.innerHTML='';
+
+    state.tasks.slice().reverse().forEach(task=>{
+      const el = document.createElement('div');
+      el.className='task';
+      el.innerHTML = `
+        <input type="checkbox" ${task.done? 'checked':''} data-id="${task.id}" />
+        <div class="title">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:600">${escapeHtml(task.title)}</div>
+            <div class="small muted">+10 XP</div>
+          </div>
+          <div class="small muted">${new Date(task.createdAt).toLocaleString()}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-ghost" data-id-delete="${task.id}">Hapus</button>
+        </div>
+      `;
+      taskList.appendChild(el);
+    });
+
+    taskList.querySelectorAll('input[type=checkbox]').forEach(chk=>chk.addEventListener('change', e=>{
+      const id = e.target.dataset.id; toggleTaskDone(id, e.target.checked);
+    }));
+
+    taskList.querySelectorAll('[data-id-delete]').forEach(btn=>btn.addEventListener('click', e=>{
+      const id = e.target.getAttribute('data-id-delete'); removeTask(id);
+    }));
+  }
+
+  function renderProfile(){
+    xpDisplay.textContent = state.xp;
+    const lvl = calcLevel(state.xp);
+    levelDisplay.textContent = lvl;
+    levelText.textContent = lvl;
+    levelDisplaySmall.textContent = lvl;
+    xpNext.textContent = ((lvl+1)*100) - state.xp;
+
+    const pct = Math.min(100, Math.round((state.xp - (lvl*100)) / 100 * 100));
+    xpFill.style.width = pct + '%';
+
+    const badges = earnedBadges(state);
+    topBadge.textContent = badges.length ? badges[badges.length-1].title : 'No badge';
+
+    achList.innerHTML='';
+    BADGES.forEach(b=>{
+      const d = document.createElement('div'); 
+      d.className='badge';
+      const have = badges.find(x=>x.id===b.id);
+      d.innerHTML = `
+        <strong style="font-size:13px">${b.title}</strong>
+        <div class="small muted">${b.desc}</div>
+        <div style="margin-left:auto" class="small">${have? '✓': '✗'}</div>
+      `;
+      achList.appendChild(d);
+    });
+
+    username.value = state.username || '';
+  }
+
+  function renderLeaderboard(){
+    leaderboardEl.innerHTML='';
+    const list = (state.leaderboard||[])
+      .slice()
+      .sort((a,b)=>b.xp - a.xp)
+      .slice(0,10);
+
+    list.forEach((row, i)=>{
+      const r = document.createElement('div'); 
+      r.className='lb-row';
+      r.innerHTML = `
+        <div>${i+1}. <strong>${escapeHtml(row.name||'Anon')}</strong></div>
+        <div>${row.xp} XP</div>
+      `;
+      leaderboardEl.appendChild(r);
+    });
+  }
+
+  // === CORE FUNCTIONS ===
+  function addTask(title){
+    if(!title) return; 
+    state.tasks.push({id:uid(), title:title, xp:10, done:false, createdAt: Date.now()});
+    saveState();
+    renderTasks(); 
+    renderProfile();
+  }
+
+  function toggleTaskDone(id, done){
+    const t = state.tasks.find(x=>x.id===id); 
+    if(!t) return;
+    if(t.done === done) return;
+
+    t.done = done;
+    if(done){ state.xp += 10; }
+    else { state.xp = Math.max(0, state.xp - 10); }
+
+    saveState();
+    updateLeaderboardXP();     // 🔥 Perbaikan penting
+    renderTasks(); 
+    renderProfile();
+  }
+
+  function removeTask(id){
+    const idx = state.tasks.findIndex(x=>x.id===id); 
+    if(idx<0) return;
+
+    const t = state.tasks[idx];
+    if(t.done){ state.xp = Math.max(0, state.xp - 10); }
+
+    state.tasks.splice(idx,1);
+    saveState();
+    updateLeaderboardXP();     // 🔥 XP leaderboard update
+    renderTasks(); 
+    renderProfile();
+  }
+
+  // === DELETE USER ===
+  function deleteUser(){
+    if(!state.username){
+      alert("Belum ada nama tersimpan.");
+      return;
+    }
+
+    const confirmDelete = confirm(`Hapus pengguna "${state.username}" dari leaderboard?`);
+    if(!confirmDelete) return;
+
+    state.leaderboard = state.leaderboard.filter(p => p.name !== state.username);
+    state.username = "";
+    state.xp = 0;
+
+    saveState();
+    renderLeaderboard();
+    renderProfile();
+
+    alert("Pengguna berhasil dihapus.");
+  }
+
+  // === EVENTS ===
+  saveProfile.addEventListener('click', ()=>{
+    state.username = username.value.trim();
+    if(state.username){
+      const existing = state.leaderboard.find(x=>x.name === state.username);
+      if(existing) existing.xp = state.xp;
+      else state.leaderboard.push({id: uid(), name: state.username, xp: state.xp});
+    }
+    saveState(); 
+    renderLeaderboard(); 
+    renderProfile();
+    alert('Profil disimpan ke leaderboard lokal.');
+  });
+
+  deleteUserBtn.addEventListener('click', deleteUser);
+
+  exportBtn.addEventListener('click', ()=>{
+    importArea.value = JSON.stringify(state.leaderboard||[]);
+    alert('JSON leaderboard disalin. Bagikan ke teman.');
+  });
+
+  importBtn.addEventListener('click', ()=>{
+    try{
+      const json = importArea.value.trim(); 
+      if(!json) throw 'Kosong';
+      const arr = JSON.parse(json);
+      if(!Array.isArray(arr)) throw 'Format salah';
+
+      arr.forEach(r=>{
+        if(!r.name) return;
+        const ex = state.leaderboard.find(x=>x.name===r.name);
+        if(ex) ex.xp = Math.max(ex.xp, r.xp||0);
+        else state.leaderboard.push({id:uid(), name:r.name, xp:r.xp||0});
+      });
+
+      saveState(); 
+      renderLeaderboard(); 
+      alert('Leaderboard berhasil diimport.');
+    }catch(e){alert('Import gagal: '+e)}
+  });
+
+  addBtn.addEventListener('click', ()=>{ 
+    addTask(taskInput.value.trim()); 
+    taskInput.value=''; 
+  });
+
+  taskInput.addEventListener('keydown', e=>{
+    if(e.key==='Enter') addBtn.click();
+  });
+
+  // === INIT ===
+  renderTasks(); 
+  renderProfile(); 
+  renderLeaderboard();
+  window.appState = state;
+</script>
+
+</body>
+</html>
